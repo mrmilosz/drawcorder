@@ -1,0 +1,23 @@
+extend layout
+block scripts
+  script(type='text/javascript', src='/static/js/views/index.js')
+
+block content
+  .loading.section
+    h3.heading Preparing drawcording.
+
+  .playback.section
+    h3.heading.title
+    canvas.display
+    .progress
+      .bar
+    button.play Play
+    button.home Home
+    button.tweet Tweet
+
+  form.recording.section(action='/', method='POST')
+    h3.heading Please draw something in the area below and press 'Publish'
+    canvas(name='recording')
+    input(type='text', name='title', placeholder='Optional title')
+    input(type='submit', value='Publish')
+    button.reset Reset

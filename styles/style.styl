@@ -1,0 +1,149 @@
+@import 'nib'
+@import 'nib/gradients'
+
+@import url(http://fonts.googleapis.com/css?family=Rock\+Salt);
+
+global-reset()
+
+// https://github.com/mozilla/kuma/blob/master/media/redesign/stylus/mixins.styl
+set-placeholder-style(prop, value)
+  &::-webkit-input-placeholder
+    {prop} value
+  &::-moz-input-placeholder
+    {prop} value
+  &::input-placeholder
+    {prop} value
+
+header-background-color = rgb(128, 100, 55)
+header-font-color = white
+
+body-background-color = white
+body-font-color = #666666
+body-input-font = 14px monospace
+body-input-font-color = black
+body-input-placeholder-font-color = lightgray
+body-error-font-color = red
+
+canvas-height = 400px
+border-width = 2px
+border-color = #888888
+shadow-color = grey
+
+
+*,*::before,*::after
+  box-sizing  border-box
+
+.error
+  color body-error-font-color
+
+body
+  background-color body-background-color
+  font             14px 'Arial', sans-serif
+  color            body-font-color
+
+  .header
+    background-color header-background-color
+    color            header-font-color
+
+    .title
+      font-size   29px
+      font-family 'Rock Salt', cursive
+
+      @media screen and (max-width: 350px)
+        font-size 23px
+
+    .title a
+      text-decoration none
+      color           inherit
+
+    a.github
+      display          block
+      width            32px
+      height           32px
+      background-image url('/static/images/github.png')
+      opacity          0.15
+      absolute         bottom 11px left 60%
+
+      @media screen and (max-width: 550px)
+        left  auto
+        right 0
+
+      @media screen and (max-width: 350px)
+        display none
+
+      &:hover
+        opacity 0.25
+
+      &:active
+        opacity 0.35
+
+    .tagline
+      font-size 20px
+      absolute  bottom 10px right 0
+
+      @media screen and (max-width: 550px)
+        display none
+
+  .content
+    max-width 800px
+    margin    0 auto
+    position  relative
+
+    .section
+      display none
+
+      &.visible
+        display block
+
+    .heading
+      font-size      20px
+      margin         20px 0 0
+      border-bottom  border-width solid border-color
+
+    canvas, input[type="text"]
+      display       block
+      width         100%
+      margin        0 0 10px
+      border        none
+      border-bottom border-width solid border-color
+
+      &:focus
+        box-shadow   0 0 5px shadow-color
+        border-color transparent
+
+      set-placeholder-style(color, body-input-placeholder-font-color)
+      set-placeholder-style(font, body-input-font)
+
+    canvas
+      height  canvas-height
+
+      &.display
+        height        canvas-height - border-width
+        border        none
+        margin-bottom 0
+
+        &:focus
+          box-shadow    inherit
+
+    input[type="text"]
+      padding       10px
+      font    body-input-font
+      color   body-input-font-color
+      outline none
+
+    .progress
+       height           border-width
+       background-color border-color
+       margin-bottom    10px
+       overflow         hidden
+       position         relative
+
+      .bar
+        box-sizing       content-box
+        background-color body-background-color
+        width            10px
+        height           100%
+        absolute         left
+
+    button, input[type="submit"]
+      margin 10px 10px 10px 0

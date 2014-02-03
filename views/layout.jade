@@ -1,0 +1,23 @@
+doctype html
+// Drawcorder is licensed under the "Don't Be A Dick" public license: http://www.dbad-license.org/ 
+html
+  head
+    meta(charset='utf-8')
+    block title
+      title Drawcorder
+
+    link(rel='stylesheet', href='/static/css/style.css')
+    link(rel='shortcut icon', href='/static/favicon.ico')
+    block styles
+
+    script(type='text/javascript', src='/static/js/es5-sham.min.js')
+    script(type='text/javascript', src='/static/js/analytics.js')
+    block scripts
+  body
+    .header
+      .content
+        h1.title #[a(href='/') Drawcorder]
+        a.github(href='//github.com/mrmilosz/drawcorder')
+        h2.tagline , recorder of drawing
+    .content
+      block content

@@ -1,0 +1,19 @@
+# Temporary files
+.*.swp
+.*.swo
+*~
+
+# Node modules
+node_modules
+
+# Compiled files (this list might grow)
+static/css/*.css
+
+# Logs
+error.log
+
+# Startup scripts
+start.sh
+
+# Analytics files
+static/js/analytics.js
