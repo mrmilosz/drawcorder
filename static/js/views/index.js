@@ -119,7 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function draw(context, coords, initial) {
-    console.log(coords.x, coords.y);
     if (initial) {
       context.beginPath();
       context.arc(coords.x, coords.y, 2, 2 * Math.PI, false);
