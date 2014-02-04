@@ -1,5 +1,5 @@
 # Typecorder
-Send a message to your friends — and let them see you type it.
+Draw a picture for your friends — and let them see you draw it.
 
 ## System dependencies
 * nodejs
