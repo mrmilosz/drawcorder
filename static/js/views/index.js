@@ -258,6 +258,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var currentPlaybackId = ++playbackId,
       tape = JSON.parse(displayNode.getAttribute('data-recording')).data;
 
+    painter.reset(displayNode);
+
     function read() {
       if (currentPlaybackId === playbackId) {
         var currentFrameTime = new Date().getTime() - startTime;
