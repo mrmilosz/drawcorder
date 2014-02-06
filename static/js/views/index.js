@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (id) {
         showSection('loading');
+        stopTape();
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
           if (xhr.readyState === 4) {
@@ -94,14 +95,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Recording
   var tape = [],
     baseTime = null,
-    mouseAnchor = null;
+    mouseAnchor = null,
+    recordingPainter = new Painter(recordingInputNode);
 
   recordingInputNode.addEventListener('mousedown', function(event) {
     event.preventDefault();
     if (event.which === 1) {
       mouseAnchor = this;
       var coords = extractMouseCoords(event, mouseAnchor);
-      painter.paint(recordingInputNode, coords);
+      recordingPainter.layer(coords);
       updateTape(coords, 'initial');
     }
   });
@@ -109,74 +111,76 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('mousemove', function(event) {
     if (mouseAnchor) {
       var coords = extractMouseCoords(event, mouseAnchor);
-      painter.paint(coords);
+      recordingPainter.paint(coords);
       updateTape(coords);
     }
   });
 
   document.addEventListener('mouseup', function() {
-    if (event.which === 1) {
-      mouseAnchor = null;
-    }
+    mouseAnchor = null;
   });
 
   undoButtonNode.addEventListener('click', function(event) {
     event.preventDefault();
     updateTape(null, 'undo');
-    painter.undo(recordingInputNode);
+    recordingPainter.undo();
   });
 
   redoButtonNode.addEventListener('click', function(event) {
     event.preventDefault();
     updateTape(null, 'redo');
-    painter.redo(recordingInputNode);
+    recordingPainter.redo();
   });
 
-  var painter = {
-    context: null,
-    undoStack: [],
-    paint: function(container, coords) {
-      if (arguments.length >= 2) {
-        var canvasNode = document.createElement('canvas');
-        container.appendChild(canvasNode);
-        canvasNode.width = canvasNode.clientWidth;
-        canvasNode.height = canvasNode.clientHeight;
-        this.context = canvasNode.getContext('2d');
-        this.context.beginPath();
-        this.context.arc(coords.x, coords.y, 2, 2 * Math.PI, false);
-        this.context.fillStyle = '#000000';
-        this.context.fill();
-        this.context.beginPath();
-        this.context.moveTo(coords.x, coords.y);
-      }
-      else {
-        coords = container;
-        this.context.lineTo(coords.x, coords.y);
-        this.context.lineWidth = 3;
-        this.context.lineJoin = 'round';
-        this.context.strokeStyle = '#000000';
-        this.context.stroke();
-      }
-    },
-    undo: function(container) {
-      var lastCanvasNode = container.querySelector('canvas:last-child');
-      if (lastCanvasNode) {
-        this.undoStack.push(lastCanvasNode);
-        container.removeChild(lastCanvasNode);
-      }
-    },
-    redo: function(container) {
-      if (this.undoStack.length) {
-        container.appendChild(this.undoStack.pop());
-      }
-    },
-    reset: function(container) {
-      this.context = null;
-      this.undoStack = [];
-      Array.prototype.forEach.call(container.querySelectorAll('canvas'), function(canvasNode) {
-        container.removeChild(canvasNode);
-      });
+  function Painter(container) {
+    this.container = container;
+    this.context = null;
+    this.undoStack = [];
+  };
+
+  Painter.prototype.layer = function(coords) {
+    var canvasNode = document.createElement('canvas');
+    this.container.appendChild(canvasNode);
+    canvasNode.width = canvasNode.clientWidth;
+    canvasNode.height = canvasNode.clientHeight;
+    this.context = canvasNode.getContext('2d');
+    this.context.beginPath();
+    this.context.arc(coords.x, coords.y, 2, 2 * Math.PI, false);
+    this.context.fillStyle = '#000000';
+    this.context.fill();
+    this.context.beginPath();
+    this.context.moveTo(coords.x, coords.y);
+  };
+
+  Painter.prototype.paint = function(coords) {
+    this.context.lineTo(coords.x, coords.y);
+    this.context.lineWidth = 3;
+    this.context.lineJoin = 'round';
+    this.context.strokeStyle = '#000000';
+    this.context.stroke();
+  };
+  
+  Painter.prototype.undo = function() {
+    var lastCanvasNode = this.container.querySelector('canvas:last-child');
+    if (lastCanvasNode) {
+      this.undoStack.push(lastCanvasNode);
+      this.container.removeChild(lastCanvasNode);
     }
+  };
+
+  Painter.prototype.redo = function() {
+    if (this.undoStack.length) {
+      this.container.appendChild(this.undoStack.pop());
+    }
+  };
+  
+  Painter.prototype.reset = function() {
+    this.context = null;
+    this.undoStack = [];
+    var self = this;
+    Array.prototype.forEach.call(this.container.querySelectorAll('canvas'), function(canvasNode) {
+      self.container.removeChild(canvasNode);
+    });
   };
 
   function extractMouseCoords(event, mouseAnchor) {
@@ -245,20 +249,21 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function resetRecording() {
-    painter.reset(recordingInputNode);
+    recordingPainter.reset(recordingInputNode);
     titleInputNode.value = '';
     tape = [];
     baseTime = null;
   }
 
   // Playback
-  var playbackId = 0;
+  var playbackId = 0,
+    playbackPainter = new Painter(displayNode);
 
   function playTape() {
     var currentPlaybackId = ++playbackId,
       tape = JSON.parse(displayNode.getAttribute('data-recording')).data;
 
-    painter.reset(displayNode);
+    playbackPainter.reset(displayNode);
 
     function read() {
       if (currentPlaybackId === playbackId) {
@@ -267,16 +272,16 @@ document.addEventListener('DOMContentLoaded', function() {
         while (tape.length && currentFrameTime >= tape[0].time) {
           var head = tape.shift();
           if (head.special === 'initial') {
-            painter.paint(displayNode, head.coords);
+            playbackPainter.layer(head.coords);
           }
           else if (head.special === 'undo') {
-            painter.undo(displayNode);
+            playbackPainter.undo();
           }
           else if (head.special === 'redo') {
-            painter.redo(displayNode);
+            playbackPainter.redo();
           }
           else {
-            painter.paint(head.coords);
+            playbackPainter.paint(head.coords);
           }
         }
         if (tape.length) {
@@ -288,6 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var startTime = new Date().getTime(),
       totalTapeTime = tape[tape.length - 1].time;
     read();
+  }
+
+  function stopTape() {
+    ++playbackId;
   }
 
   playButtonNode.addEventListener('click', playTape);
