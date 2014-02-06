@@ -8,7 +8,7 @@ block content
 
   .playback.section
     h3.heading.title
-    canvas.display
+    .input.display
     .progress
       .bar
     button.play Play
@@ -17,7 +17,9 @@ block content
 
   form.recording.section(action='/', method='POST')
     h3.heading Please draw something in the area below and press 'Publish'
-    canvas(name='recording')
+    .input
     input(type='text', name='title', placeholder='Optional title')
     input(type='submit', value='Publish')
+    button.undo(autofocus) Undo
+    button.redo Redo
     button.reset Reset

@@ -12,8 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     tweetButtonNode = playbackSectionNode.querySelector('.tweet'),
 
     recordingSectionNode = document.querySelector('.recording.section'),
-    recordingInputNode = recordingSectionNode.querySelector('[name="recording"]'),
+    recordingInputNode = recordingSectionNode.querySelector('.input'),
     titleInputNode = recordingSectionNode.querySelector('[name="title"]'),
+    undoButtonNode = recordingSectionNode.querySelector('.undo'),
+    redoButtonNode = recordingSectionNode.querySelector('.redo'),
     resetButtonNode = recordingSectionNode.querySelector('.reset');
 
   pageTitleNode.addEventListener('click', function(event) {
@@ -92,49 +94,90 @@ document.addEventListener('DOMContentLoaded', function() {
   // Recording
   var tape = [],
     baseTime = null,
-    mouseAnchor = null,
-    recordingContext = recordingInputNode.getContext('2d');
-
-  recordingInputNode.width = recordingInputNode.clientWidth;
-  recordingInputNode.height = recordingInputNode.clientHeight;
+    mouseAnchor = null;
 
   recordingInputNode.addEventListener('mousedown', function(event) {
     event.preventDefault();
-    mouseAnchor = this;
-    var coords = extractMouseCoords(event, mouseAnchor);
-    draw(recordingContext, coords, true);
-    updateTape(coords, true);
+    if (event.which === 1) {
+      mouseAnchor = this;
+      var coords = extractMouseCoords(event, mouseAnchor);
+      painter.paint(recordingInputNode, coords);
+      updateTape(coords, 'initial');
+    }
   });
 
   document.addEventListener('mousemove', function(event) {
     if (mouseAnchor) {
       var coords = extractMouseCoords(event, mouseAnchor);
-      draw(recordingContext, coords, false);
-      updateTape(coords, false);
+      painter.paint(coords);
+      updateTape(coords);
     }
   });
 
   document.addEventListener('mouseup', function() {
-    mouseAnchor = null;
+    if (event.which === 1) {
+      mouseAnchor = null;
+    }
   });
 
-  function draw(context, coords, initial) {
-    if (initial) {
-      context.beginPath();
-      context.arc(coords.x, coords.y, 2, 2 * Math.PI, false);
-      context.fillStyle = '#000000';
-      context.fill();
-      context.beginPath();
-      context.moveTo(coords.x, coords.y);
+  undoButtonNode.addEventListener('click', function(event) {
+    event.preventDefault();
+    updateTape(null, 'undo');
+    painter.undo(recordingInputNode);
+  });
+
+  redoButtonNode.addEventListener('click', function(event) {
+    event.preventDefault();
+    updateTape(null, 'redo');
+    painter.redo(recordingInputNode);
+  });
+
+  var painter = {
+    context: null,
+    undoStack: [],
+    paint: function(container, coords) {
+      if (arguments.length >= 2) {
+        var canvasNode = document.createElement('canvas');
+        container.appendChild(canvasNode);
+        canvasNode.width = canvasNode.clientWidth;
+        canvasNode.height = canvasNode.clientHeight;
+        this.context = canvasNode.getContext('2d');
+        this.context.beginPath();
+        this.context.arc(coords.x, coords.y, 2, 2 * Math.PI, false);
+        this.context.fillStyle = '#000000';
+        this.context.fill();
+        this.context.beginPath();
+        this.context.moveTo(coords.x, coords.y);
+      }
+      else {
+        coords = container;
+        this.context.lineTo(coords.x, coords.y);
+        this.context.lineWidth = 3;
+        this.context.lineJoin = 'round';
+        this.context.strokeStyle = '#000000';
+        this.context.stroke();
+      }
+    },
+    undo: function(container) {
+      var lastCanvasNode = container.querySelector('canvas:last-child');
+      if (lastCanvasNode) {
+        this.undoStack.push(lastCanvasNode);
+        container.removeChild(lastCanvasNode);
+      }
+    },
+    redo: function(container) {
+      if (this.undoStack.length) {
+        container.appendChild(this.undoStack.pop());
+      }
+    },
+    reset: function(container) {
+      this.context = null;
+      this.undoStack = [];
+      Array.prototype.forEach.call(container.querySelectorAll('canvas'), function(canvasNode) {
+        container.removeChild(canvasNode);
+      });
     }
-    else {
-      context.lineTo(coords.x, coords.y);
-      context.lineWidth = 3;
-      context.lineJoin = 'round';
-      context.strokeStyle = '#000000';
-      context.stroke();
-    }
-  }
+  };
 
   function extractMouseCoords(event, mouseAnchor) {
     var offset = documentOffset(mouseAnchor);
@@ -158,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
-  function updateTape(coords, initial) {
+  function updateTape(coords, special) {
     var time = 0;
     if (baseTime === null) {
       baseTime = new Date().getTime();
@@ -168,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     tape.push({
       time: time,
-      initial: initial,
+      special: special,
       coords: coords
     });
   }
@@ -202,28 +245,18 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function resetRecording() {
-    // Fix canvas scaling
-    recordingInputNode.width = recordingInputNode.clientWidth;
-    recordingInputNode.height = recordingInputNode.clientHeight;
-    recordingContext.clearRect(0, 0, recordingInputNode.width, recordingInputNode.height);
+    painter.reset(recordingInputNode);
     titleInputNode.value = '';
     tape = [];
     baseTime = null;
   }
 
   // Playback
-  var playbackId = 0,
-    displayContext = displayNode.getContext('2d');
+  var playbackId = 0;
 
   function playTape() {
     var currentPlaybackId = ++playbackId,
       tape = JSON.parse(displayNode.getAttribute('data-recording')).data;
-
-    // Fix canvas scaling
-    displayNode.width = displayNode.clientWidth;
-    displayNode.height = displayNode.clientHeight;
-
-    displayContext.clearRect(0, 0, displayNode.width, displayNode.height);
 
     function read() {
       if (currentPlaybackId === playbackId) {
@@ -231,7 +264,18 @@ document.addEventListener('DOMContentLoaded', function() {
         progressBarNode.style.left = parseInt(progressNode.clientWidth * currentFrameTime / totalTapeTime) + 'px';
         while (tape.length && currentFrameTime >= tape[0].time) {
           var head = tape.shift();
-          draw(displayContext, head.coords, head.initial);
+          if (head.special === 'initial') {
+            painter.paint(displayNode, head.coords);
+          }
+          else if (head.special === 'undo') {
+            painter.undo(displayNode);
+          }
+          else if (head.special === 'redo') {
+            painter.redo(displayNode);
+          }
+          else {
+            painter.paint(head.coords);
+          }
         }
         if (tape.length) {
           window.requestAnimationFrame(read);

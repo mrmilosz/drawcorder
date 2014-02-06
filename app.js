@@ -54,7 +54,7 @@ var Recording = mongoose.model('Recording', new Schema({
   title: String,
   data: [{
     time: Number,
-    initial: Boolean,
+    special: String,
     coords: {
       x: Number, y: Number
     }
